@@ -1,53 +1,82 @@
-    package com.bisal.zb;
+#coding=utf-8
+#######################################################
+# $Name:        mysql_per_monitor_1.py
+# $Version:     v1.0
+# $Author:      bisal
+# $Create Date: 2017-08-26
+# $Descriptino: MySQL Performance Mointor
+#######################################################
 
-    import java.io.FileNotFoundException;
-    import java.io.FileReader;
-    import java.io.FileWriter;
-    import java.io.IOException;
+import MySQLdb
+import re
+import time
 
-    import com.google.gson.JsonArray;
-    import com.google.gson.JsonIOException;
-    import com.google.gson.JsonObject;
-    import com.google.gson.JsonParser;
-    import com.google.gson.JsonSyntaxException;
+def enum(**enums):
+    return type('Enum', (), enums)
 
-    public class ZB_1 {
-        public static void main(String[] args) {
-            try {
-                JsonParser parser = new JsonParser(); // 创建JSON解析器
-                JsonObject object = (JsonObject) parser.parse(new FileReader(
-                        "file/zhiban.log")); // 创建JsonObject对象
-                JsonArray array = object.get("dlist").getAsJsonArray();
+Status=enum(QPS="queries", Commit="com_commit",
+Rollback="com_rollback", Threads_con="Threads_connected",
+Threads_run="Threads_running")
 
-                // 得到为json的数组
-                FileWriter writer = new FileWriter("file/output1.txt");
-                String dName;
-                String dPerson;
-                String dEmail;
-                String dPhone;
-                String dDate;
-                for (int i = 0; i < array.size(); i++) {
-                    JsonObject subObject = array.get(i).getAsJsonObject();
-                    dutyName = subObject.get("dName").getAsString();
-                    dutyPerson = subObject.get("dPerson").getAsString();
-                    dutyPhone = subObject.get("dPhone").getAsString();
-                    dutyEmail = subObject.get("dEmail").getAsString();
-                    dutyDate = subObject.get("startDate").getAsString()
-                            .substring(0, 10);
-                    writer.write("日期=[" + dDate + "] 值班项=[" + dName
-                            + "] 值班人=[" + dPerson + "] 邮箱=[" + dEmail
-                            + "] 电话=[" + dPhone + "]\n");
-                }
-                writer.close();
-            } catch (JsonIOException e) {
-                e.printStackTrace();
-            } catch (JsonSyntaxException e) {
-                e.printStackTrace();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        }
-    }
+# open database connection
+dbConn=MySQLdb.connect(
+        host='x.x.x.x',
+        port=3306,
+        user='bisal',
+        passwd='xxxxx',
+        db='mysql')
+cursor=dbConn.cursor()
+
+count=0
+while(1==1) :
+        # queries
+        sql='show global status like \'' + Status.QPS + '\''
+        cursor.execute(sql)
+        result=cursor.fetchone()
+        str= ''.join(result)
+        q=str[len(Status.QPS):len(str)]
+
+        # com_commit
+        sql='show global status like \'' + Status.Commit + '\''
+        cursor.execute(sql)
+        result=cursor.fetchone()
+        str= ''.join(result)
+        c=str[len(Status.Commit):len(str)]
+
+        # com_rollback
+        sql='show global status like \'' + Status.Rollback + '\''
+        cursor.execute(sql)
+        result=cursor.fetchone()
+        str= ''.join(result)
+        r=str[len(Status.Rollback):len(str)]
+
+        # Threads_con
+        sql='show global status like \'' + Status.Threads_con + '\''
+        cursor.execute(sql)
+        result=cursor.fetchone()
+        str= ''.join(result)
+        tc=str[len(Status.Threads_con):len(str)]
+
+        # Threads_run
+        sql='show global status like \'' + Status.Threads_run + '\''
+        cursor.execute(sql)
+        result=cursor.fetchone()
+        str= ''.join(result)
+        tr=str[len(Status.Threads_run):len(str)]
+        if (count==0):
+                print "|QPS        |Commit     |Rollback   |TPS        |Threads_con  |Threads_run |"
+                print "------------------------------------------------------------------------------"
+        if (count>=10):
+                count=0
+                print "------------------------------------------------------------------------------"
+                print "|QPS        |Commit     |Rollback   |TPS        |Threads_con  |Threads_run |"
+                print "------------------------------------------------------------------------------"
+                print "|%-10s |%-10s |%-10s |%-10s |%-12s |%-12s|" % (q,c,r,c+r,tc,tr)
+        else:
+                print "|%-10s |%-10s |%-10s |%-10s |%-12s |%-12s|" % (q,c,r,c+r,tc,tr)
+        count+=1
+        time.sleep(1)
+
+# close database connection
+cursor.close()
+dbConn.close()
